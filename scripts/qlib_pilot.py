@@ -217,7 +217,7 @@ def summarise_artifacts(artifacts):
                 dst = RESULTS / f"{run_id[:8]}_{f.name}"
             shutil.copy2(f, dst)
             copied.append(dst.name)
-        elif f.suffix == ".pkl" and "port_analysis" in f.name:
+        elif f.suffix == ".pkl" and ("port_analysis" in f.name or f.name.startswith("report")):
             try:
                 import pandas as pd
                 obj = pd.read_pickle(f)
@@ -225,8 +225,9 @@ def summarise_artifacts(artifacts):
                 if hasattr(obj, "to_csv"):
                     obj.to_csv(dst)
                     copied.append(dst.name)
-                shutil.copy2(f, RESULTS / f.name)
-                copied.append(f.name)
+                if "port_analysis" in f.name:
+                    shutil.copy2(f, RESULTS / f.name)
+                    copied.append(f.name)
             except Exception:
                 notes.append(f"  (could not convert {f.name}: "
                              f"{traceback.format_exc(limit=1)})")
@@ -255,8 +256,16 @@ def port_analysis_tables(artifacts):
             try:
                 import pandas as pd
                 obj = pd.read_pickle(f)
-                if hasattr(obj, "to_markdown"):
-                    tables.append((str(f), obj.to_markdown()))
+                if isinstance(obj, pd.DataFrame):
+                    # Render markdown by hand: DataFrame.to_markdown() needs
+                    # the optional `tabulate` package, which we do not install.
+                    cols = [str(obj.index.name or "")] + [str(c) for c in obj.columns]
+                    lines = ["| " + " | ".join(cols) + " |",
+                             "|" + "---|" * len(cols)]
+                    for idx, row in obj.iterrows():
+                        lines.append("| " + " | ".join(
+                            [str(idx)] + [repr(v) for v in row.values]) + " |")
+                    tables.append((str(f), "\n".join(lines)))
                 else:
                     tables.append((str(f), f"```\n{obj}\n```"))
             except Exception:
