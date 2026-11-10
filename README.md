@@ -87,7 +87,10 @@ set -o pipefail; python scripts/qlib_pilot.py 2>&1 | tee results/run.log
 - **Dependency pins**: `requirements.txt` pins numpy 1.26 / pandas 2.2 /
   mlflow <3 around `pyqlib==0.9.6`, the combination verified for
   Python 3.11; unpinned resolution currently drifts to majors that
-  break Qlib.
+  break Qlib. `joblib` is pinned to 1.2.0 specifically: Qlib's
+  `ParallelExt` uses joblib internals removed in joblib ≥ 1.3, and with
+  a newer joblib `qrun` fails during dataset loading
+  (`AttributeError: 'ParallelExt' object has no attribute '_backend_args'`).
 - **Runtime**: the full 2008–2020 Alpha158 benchmark is the real
   benchmark, not a trimmed demo — expect the qrun stage to take tens of
   minutes on a standard GitHub runner.
